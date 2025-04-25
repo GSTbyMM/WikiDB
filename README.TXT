@@ -1,3 +1,5 @@
+Note: This is fork of the original extension compatible with MediaWiki 1.43.1.
+
 == SUMMARY ==
 
 WikiDB is a MediaWiki extension which can be used to add database
