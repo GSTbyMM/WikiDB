@@ -1,0 +1,56 @@
+
+Use and re-use of WikiDB is governed by the
+Creative Commons Attribution-ShareAlike 2.0 License, UK: England & Wales
+
+This document contains a summary of the terms of the license, provided for
+convenience, but you are also advised to check the full legal text, at
+http://creativecommons.org/licenses/by-sa/2.0/uk/legalcode.
+
+Note that I reserve the right to change the license at any time, and
+therefore this license only applies to the version of WikiDB with which it
+is distributed.  It may or may not apply to any past or future versions.
+
+- Mark Clements (HappyDog)
+
+ --------------------------------------------------------------------------
+ Creative Commons Attribution-ShareAlike 2.0 License, UK: England & Wales
+ http://creativecommons.org/licenses/by-sa/2.0/uk/
+ --------------------------------------------------------------------------
+ 
+ You are free:
+ 
+    * to copy, distribute, display, and perform the work
+    * to make derivative works
+ 
+ Under the following conditions:
+ 
+    * ATTRIBUTION
+      You must give the original author credit.
+ 
+    * SHARE ALIKE
+      If you alter, transform, or build upon this work, you may distribute
+      the resulting work only under a licence identical to this one.
+ 
+ With the understanding that:
+ 
+    * WAIVER
+      Any of the above conditions can be waived if you get permission
+      from the copyright holder.
+ 
+    * PUBLIC DOMAIN
+      Where the work or any of its elements is in the public domain under
+      applicable law, that status is in no way affected by the license.
+ 
+    * OTHER RIGHTS
+      In no way are any of the following rights affected by the license:
+      * Your fair dealing or fair use rights, or other applicable
+        copyright exceptions and limitations;
+      * The author's moral rights;
+      * Rights other persons may have either in the work itself or in how
+        the work is used, such as publicity or privacy rights.
+ 
+    * NOTICE
+      For any reuse or distribution, you must make clear to others the
+      licence terms of this work.
+ 
+ --------------------------------------------------------------------------
