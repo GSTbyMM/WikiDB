@@ -345,6 +345,10 @@ if (!defined('WikiDB')) {
 	// Open form.
 		$Form = '<form id="ViewDataOptions" method="get" action="'
 			  . WikiDB_EscapeHTML($wgScript) . '">';
+	// Add custom guide text here
+	        $Form .= '<div class="wikidb-viewdata-guide">'
+	               . 'You can filter and sort the data below. Enter criteria to limit results, or leave blank to show all records. The following <b>operators</b> are available for use in the criteria field: Equal (=), Not Equal (!=), Greater than (>), Less than (<), Greater than or equal to (>=), Less than or equal to (<=), Conjunctions (AND, OR, XOR), Grouping ( ). For detailed search guide, [[click here]].'
+	               . '</div>';
 
 	// Get current query parameters which we will want to include as hidden inputs,
 	// so that we end up on the right page with the right action, etc.
