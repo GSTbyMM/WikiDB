@@ -429,10 +429,12 @@ if (!defined('WikiDB')) {
 	function efWikiDB_LinksUpdate(&$LinksUpdate) {
 		$objTitle = $LinksUpdate->getTitle();
 
-		if ($objTitle->exists())
-			WikiDB::PageUpdated($objTitle);
-		else
-			WikiDB::PageDeleted($objTitle);
+		if (WikiDB_IsValidTable($objTitle)) {
+	            if ($objTitle->exists())
+	                WikiDB::PageUpdated($objTitle);
+	            else
+	                WikiDB::PageDeleted($objTitle);
+        	}
 
 		return true;
 	}
