@@ -1,4 +1,4 @@
-Note: This is fork of the original extension compatible with MediaWiki 1.43.1.
+Note: This is fork of the original extension compatible with MediaWiki 1.43.1 with PHP 8.4.
 
 == SUMMARY ==
 
