@@ -1,4 +1,6 @@
 <?php
+use MediaWiki\MediaWikiServices;
+
 if (!defined('MEDIAWIKI'))
 	die("MediaWiki extensions cannot be run directly.");
 if (!defined('WikiDB')) {
@@ -147,7 +149,11 @@ class WikiDB_Table {
 			return;
 
 	// Retrieve existing data row_ids for this article
-		$DB = wfGetDB(DB_REPLICA);
+		if (class_exists('MediaWiki\MediaWikiServices')) {
+            $DB = \MediaWiki\MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection(DB_PRIMARY);
+        } else {
+            $DB = wfGetDB(DB_PRIMARY);
+        }
 		$objResult = $DB->select(pWIKIDB_tblTables, "table_def",
 								 array(
 										'table_title' 		=> $this->GetDBKey(),
@@ -312,7 +318,11 @@ class WikiDB_Table {
 		if (isset($arrDestinationCache[$NS][$TitleText]))
 			return $arrDestinationCache[$NS][$TitleText];
 
-		$DB = wfGetDB(DB_REPLICA);
+		if (class_exists('MediaWiki\MediaWikiServices')) {
+            $DB = \MediaWiki\MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection(DB_PRIMARY);
+        } else {
+            $DB = wfGetDB(DB_PRIMARY);
+        }
 		$Row = $DB->selectRow(pWIKIDB_tblTables, "*",
 							  array(
 									'table_namespace'	=> $NS,
@@ -374,7 +384,11 @@ class WikiDB_Table {
 // The function avoids redirect loops, and will return all tables in the loop.
 	function GetTableAliases() {
 		$fname = __CLASS__ . "::" . __FUNCTION__;
-		$DB = wfGetDB(DB_REPLICA);
+		if (class_exists('MediaWiki\MediaWikiServices')) {
+            $DB = \MediaWiki\MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection(DB_PRIMARY);
+        } else {
+            $DB = wfGetDB(DB_PRIMARY);
+        }
 
 	// We cache the alias list for all tables, as this function can be called
 	// multiple times within the same script, for the same table.

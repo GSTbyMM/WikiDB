@@ -65,35 +65,28 @@ class WikiDB_Parser {
 // This can then be used by the code which triggered the parse in order to do
 // something else with the information, e.g. save it to the database, display a
 // summary on the edit form, etc.
-	static function RegisterMatchedTag($Parser, $Title, $TagName, $Arguments,
-									   $Content)
-	{
-		if (!isset($Parser->mWikiDB_ExtractedTags))
-			$Parser->mWikiDB_ExtractedTags = array();
-
-	// We use a custom property on the Parser object, not on the ParserOutput object.
-	// This is because this information is not required for displaying/rendering the
-	// page and therefore we don't want it stored in the cache.
-	// MW 1.21 introduces methods to store custom extension information on the
-	// ParserOutput object, but as far as I know this is still not supported for the
-	// Parser directly, so for now at least I think this remains the best method of
-	// handling this.
-		$Parser->mWikiDB_ExtractedTags[$TagName][] = array(
-						'Title' => $Title,
-						'Arguments' => $Arguments,
-						'Content' => $Content,
-					);
-	}
+	static function RegisterMatchedTag($Parser, $Title, $TagName, $Arguments, $Content)
+    {
+        $output = $Parser->getOutput();
+        $tags = $output->getExtensionData('WikiDB_ExtractedTags') ?? [];
+        if (!isset($tags[$TagName])) {
+            $tags[$TagName] = [];
+        }
+        $tags[$TagName][] = [
+            'Title' => $Title,
+            'Arguments' => $Arguments,
+            'Content' => $Content,
+        ];
+        $output->setExtensionData('WikiDB_ExtractedTags', $tags);
+    }
 
 // GetMatchedTags()
 // Returns an array containing information about each tag of the specified type that
 // was found in the last parse.
 	static function GetMatchedTags($Parser, $TagName) {
-		if (isset($Parser->mWikiDB_ExtractedTags[$TagName]))
-			return $Parser->mWikiDB_ExtractedTags[$TagName];
-		else
-			return array();
-	}
+        $tags = $Parser->getOutput()->getExtensionData('WikiDB_ExtractedTags') ?? [];
+        return $tags[$TagName] ?? [];
+    }
 
 // pClearMatchedTags()
 // Clears all tags that were registered during any previous parsing operation.

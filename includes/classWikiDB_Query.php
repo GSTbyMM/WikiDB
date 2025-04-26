@@ -63,7 +63,11 @@ class WikiDB_Query {
 	function __construct($TableString, $CriteriaString = "", $SortString = "",
 						 $SourceArticle = "")
 	{
-		$this->pDB = wfGetDB(DB_REPLICA);
+		if (class_exists('MediaWiki\MediaWikiServices')) {
+            $this->pDB = \MediaWiki\MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection(DB_REPLICA);
+        } else {
+            $this->pDB = wfGetDB(DB_REPLICA);
+        }
 		$this->pErrorMsg = "";
 
 	// For simplicity, if a Table object is passed in, we just extract the table
@@ -78,8 +82,10 @@ class WikiDB_Query {
 
 		if (!$this->pSetTablesFromString($TableString))
 			return;
-		if (!$this->pSetCriteriaFromString($CriteriaString))
-			return;
+		if (!$this->pSetCriteriaFromString($CriteriaString)) {
+            $this->pCriteria = array(); // Ensure it's always an array
+            return;
+        }
 		if (!$this->pSetSortFromString($SortString))
 			return;
 
@@ -1040,10 +1046,13 @@ class WikiDB_Query {
 		foreach ($this->pSortFields as $Key => $Value) {
 			$arrAllFields[] =& $this->pSortFields[$Key];
 		}
-		foreach ($this->pCriteria as $Key => $Value) {
-			if ($Value[0] == self::TOKEN_Identifier)
-				$arrAllFields[] =& $this->pCriteria[$Key][1];
-		}
+		if ( is_array($this->pCriteria) ) {
+            foreach ( $this->pCriteria as $Key => $Value ) {
+                if ( isset($Value[0]) && $Value[0] == self::TOKEN_Identifier ) {
+                    $arrAllFields[] =& $this->pCriteria[$Key][1];
+                }
+            }
+        }
 
 	// Set up the aliases.
 		$FieldCount = 1;
@@ -1187,6 +1196,9 @@ class WikiDB_Query {
 
 	// Add criteria specified for query, if there are any.
 		$UserCriteria = "";
+		if (!is_array($arrCriteria)) {
+            $arrCriteria = array();
+        }
 		if (count($arrCriteria) > 0) {
 			$UserCriteria .= "(";
 			foreach ($arrCriteria as $i => $Criteria) {

@@ -35,7 +35,11 @@ class WikiDB {
 		static $Result;
 
 		if (!isset($Result)) {
-			$DB = wfGetDB(DB_PRIMARY);
+            if (class_exists('MediaWiki\MediaWikiServices')) {
+                $DB = \MediaWiki\MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection(DB_PRIMARY);
+            } else {
+                $DB = wfGetDB(DB_PRIMARY);
+            }
 			$Result = $DB->tableExists(pWIKIDB_tblRows);
 		}
 
@@ -223,7 +227,11 @@ class WikiDB {
 // calling function to check this if it may not be the case.
 	static function pAddTableDefinition($TableTitle, $PageText) {
 		$fname = __CLASS__ . "::" . __FUNCTION__;
-		$DB = wfGetDB(DB_PRIMARY);
+		if (class_exists('MediaWiki\MediaWikiServices')) {
+            $DB = \MediaWiki\MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection(DB_PRIMARY);
+        } else {
+            $DB = wfGetDB(DB_PRIMARY);
+        }
 
 	// Delete the old definition.
 	// TODO: This should probably be done using an update query if the page
@@ -290,7 +298,11 @@ class WikiDB {
 // or we are wiping existing data before a reparse.
 	static function pDeleteDataForPage($Title) {
 		$fname = __CLASS__ . "::" . __FUNCTION__;
-		$DB = wfGetDB(DB_PRIMARY);
+		if (class_exists('MediaWiki\MediaWikiServices')) {
+            $DB = \MediaWiki\MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection(DB_PRIMARY);
+        } else {
+            $DB = wfGetDB(DB_PRIMARY);
+        }
 
 	// Retrieve existing data row_ids for this article
 		$objResult = $DB->select(pWIKIDB_tblRows, array('row_id'),
@@ -320,7 +332,11 @@ class WikiDB {
 // $DestinationTable.
 	static function pAddDataDefinition($SourcePage, $DataTagText, $Args) {
 		$fname = __CLASS__ . "::" . __FUNCTION__;
-		$DB = wfGetDB(DB_PRIMARY);
+		if (class_exists('MediaWiki\MediaWikiServices')) {
+            $DB = \MediaWiki\MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection(DB_PRIMARY);
+        } else {
+            $DB = wfGetDB(DB_PRIMARY);
+        }
 
 	// Ensure that $DestinationTable is a WikiDB_Table object.
 		$DestinationTable = new WikiDB_Table($Args['table']);
@@ -435,7 +451,11 @@ class WikiDB {
 // pSetupPageObjects().
 	static function PageDeleted($PageObject) {
 		$fname = __CLASS__ . "::" . __FUNCTION__;
-		$DB = wfGetDB(DB_PRIMARY);
+		if (class_exists('MediaWiki\MediaWikiServices')) {
+            $DB = \MediaWiki\MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection(DB_PRIMARY);
+        } else {
+            $DB = wfGetDB(DB_PRIMARY);
+        }
 
 	// Setup $Title and $Article from $PageObject.
 		$Title = null;
@@ -489,7 +509,11 @@ class WikiDB {
 			return;
 
 		$fname = __CLASS__ . "::" . __FUNCTION__;
-		$DB = wfGetDB(DB_PRIMARY);
+		if (class_exists('MediaWiki\MediaWikiServices')) {
+            $DB = \MediaWiki\MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection(DB_PRIMARY);
+        } else {
+            $DB = wfGetDB(DB_PRIMARY);
+        }
 
 		if ($BatchSize === null)
 			$BatchSize = $wgWikiDBMaxRefreshRate;
