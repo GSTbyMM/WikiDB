@@ -34,8 +34,8 @@ class WikiDB_TypeHandler {
 								 "pNumberTypeHandler"),
 		'int' 			=> array("pWikiDB_BuiltInTypeHandlers",
 								 "pIntegerTypeHandler"), // Alias for 'integer'.
-//		'date' 			=> array("pWikiDB_BuiltInTypeHandlers",
-//									 "pStringTypeHandler"),
+		'date' 			=> array("pWikiDB_BuiltInTypeHandlers",
+								 "pDateTypeHandler"),
 		'image' 		=> array("pWikiDB_BuiltInTypeHandlers",
 								 "pImageTypeHandler"),
 		'link' 			=> array("pWikiDB_BuiltInTypeHandlers",

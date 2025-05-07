@@ -392,4 +392,37 @@ class pWikiDB_BuiltInTypeHandlers {
 		return $Result;
 	}
 
+	static function pDateTypeHandler($Action, $Value, $Options) {
+        $Value = trim($Value);
+        // Accepts dd-mm-YYYY, dd/mm/YYYY, or YYYY-mm-dd
+        $pattern1 = '/^(\d{2})[-\/](\d{2})[-\/](\d{4})$/'; // dd-mm-YYYY or dd/mm/YYYY
+        $pattern2 = '/^(\d{4})[-\/](\d{2})[-\/](\d{2})$/'; // YYYY-mm-dd or YYYY/mm/dd
+
+        switch ($Action) {
+            case WIKIDB_Validate:
+                return preg_match($pattern1, $Value) === 1 || preg_match($pattern2, $Value) === 1;
+
+            case WIKIDB_GetSimilarity:
+                return (preg_match($pattern1, $Value) === 1 || preg_match($pattern2, $Value) === 1) ? 10 : 0;
+
+            case WIKIDB_FormatForDisplay:
+                if (preg_match($pattern1, $Value, $m)) {
+                    // dd-mm-YYYY or dd/mm/YYYY
+                    return $m[1] . '-' . $m[2] . '-' . $m[3];
+                } elseif (preg_match($pattern2, $Value, $m)) {
+                    // YYYY-mm-dd or YYYY/mm/dd
+                    return $m[3] . '-' . $m[2] . '-' . $m[1];
+                }
+                return $Value;
+
+            case WIKIDB_FormatForSorting:
+                if (preg_match($pattern1, $Value, $m)) {
+                    return $m[3] . $m[2] . $m[1];
+                } elseif (preg_match($pattern2, $Value, $m)) {
+                    return $m[1] . $m[2] . $m[3];
+                }
+                return $Value;
+        }
+    }
+
 } // END class pWikiDB_BuiltInTypeHandlers

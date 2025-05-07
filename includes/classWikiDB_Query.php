@@ -64,9 +64,9 @@ class WikiDB_Query {
 						 $SourceArticle = "")
 	{
 		if (class_exists('MediaWiki\MediaWikiServices')) {
-            $this->pDB = \MediaWiki\MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection(DB_REPLICA);
+            $this->pDB = \MediaWiki\MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection(DB_PRIMARY);
         } else {
-            $this->pDB = wfGetDB(DB_REPLICA);
+            $this->pDB = wfGetDB(DB_PRIMARY);
         }
 		$this->pErrorMsg = "";
 
@@ -397,6 +397,7 @@ class WikiDB_Query {
 							self::TOKEN_LeftParenthesis,
 							self::TOKEN_Conjunction,
 							self::TOKEN_Operator,
+							self::TOKEN_String, // Allow a string after a string (for BETWEEN)
 						)),
 				self::TOKEN_Identifier => array(true, true, array(
 							self::TOKEN_LeftParenthesis,
@@ -561,6 +562,7 @@ class WikiDB_Query {
 				"GTE"		=> self::TOKEN_Operator,	// greater than or equal
 				"GT"		=> self::TOKEN_Operator,	// greater than
 				"LIKE"		=> self::TOKEN_Operator,	// SQL LIKE
+				"BETWEEN"	=> self::TOKEN_Operator,	// SQL BETWEEN
 
 			// Conjunctions.
 				"AND"		=> self::TOKEN_Conjunction,
@@ -596,6 +598,7 @@ class WikiDB_Query {
 				"GTE"		=> self::TOKEN_Operator,	// greater than or equal
 				"GT"		=> self::TOKEN_Operator,	// greater than
 				"LIKE"		=> self::TOKEN_Operator,	// SQL LIKE
+				"BETWEEN"	=> self::TOKEN_Operator,	// SQL BETWEEN
 
 			// Conjunctions.
 				"AND"		=> self::TOKEN_Conjunction,
@@ -825,6 +828,15 @@ class WikiDB_Query {
 		// If an operator is not followed by a string, identifier or unquoted
 		// literal, then add an additional token for the implied empty string.
 			if ($Token[0] == self::TOKEN_Operator) {
+				// Special handling for BETWEEN: split next unquoted literal into two tokens if needed
+				if (strtoupper($Token[1]) === 'BETWEEN' && isset($arrTokens[$Index + 1]) && $arrTokens[$Index + 1][0] == self::TOKEN_UnquotedLiteral) {
+					$parts = preg_split('/\s+/', $arrTokens[$Index + 1][1], 2);
+					if (count($parts) == 2) {
+						$arrResults[] = array(self::TOKEN_String, $parts[0]);
+						$arrResults[] = array(self::TOKEN_String, $parts[1]);
+						continue; // skip normal add below
+					}
+				}
 				if (!isset($arrTokens[$Index + 1])
 					|| !in_array($arrTokens[$Index + 1][0], $arrValidOperands))
 				{
@@ -1149,6 +1161,11 @@ class WikiDB_Query {
 		$TableData = $this->pTables[key($this->pTables)];
 		$this->pSQL = $this->pGetQuerySQL($TableData, $this->pCriteria,
 										  $this->pSortFields, $this->pSourceArticle);
+
+		if ($this->HasErrors() || trim($this->pSQL) === '') {
+			return;
+		}
+
 		$this->pResult = $this->pDB->query($this->pSQL, $fname);
 	}
 
@@ -1252,9 +1269,34 @@ class WikiDB_Query {
 						// Add LIKE support
 						if (strtoupper($Criteria[1]) === 'LIKE') {
 							$UserCriteria .= " LIKE ";
-						} else {
-							$UserCriteria .= " " . $Criteria[1] . " ";
+							break;
 						}
+						// Add BETWEEN support
+						if (strtoupper($Criteria[1]) === 'BETWEEN') {
+							// The field name is in the previous token
+							$fieldToken = $arrCriteria[$i-1];
+							$fieldName = '';
+							if ($fieldToken[0] === self::TOKEN_Identifier && isset($fieldToken[1]['field'])) {
+								$fieldName = $fieldToken[1]['field'];
+							}
+							// Check that both start and end values are present
+							if (!isset($arrCriteria[$i+1][1]) || !isset($arrCriteria[$i+2][1])) {
+								// Set a user-friendly error message and return
+								$this->pErrorMsg = "Bad criteria: Please include a space between the two dates in the BETWEEN clause (e.g. 'BETWEEN 12-04-2017 31-10-2027').";
+								return '';
+							}
+							$start = $arrCriteria[$i+1][1];
+							$end = $arrCriteria[$i+2][1];
+							$fieldType = $objTable->GetFieldType($fieldName);
+							if ($fieldType === 'date') {
+								$start = pWikiDB_BuiltInTypeHandlers::pDateTypeHandler(WIKIDB_FormatForSorting, $start, []);
+								$end = pWikiDB_BuiltInTypeHandlers::pDateTypeHandler(WIKIDB_FormatForSorting, $end, []);
+							}
+							$UserCriteria .= " BETWEEN " . $DB->addQuotes($start) . " AND " . $DB->addQuotes($end);
+							$i += 2; // Skip next two tokens
+							break;
+						}
+						$UserCriteria .= " " . $Criteria[1] . " ";
 						break;
 
 					case self::TOKEN_LeftParenthesis:
