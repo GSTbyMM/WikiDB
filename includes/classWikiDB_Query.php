@@ -28,6 +28,7 @@ class WikiDB_Query {
 	var $pCriteria = array();
 	var $pSourceArticle = "";
 	var $pFreeTextTerms = array();
+	var $pFreeTextOption = 'phrase';
 
 	var $pSQL = "";
 	var $pResult;
@@ -65,7 +66,7 @@ class WikiDB_Query {
 //		 converting the other operand to a normalised pair of NS/DBKey values (quite
 //		 difficult with literals, probably impossible with stored data).
 	function __construct($TableString, $CriteriaString = "", $SortString = "",
-						 $SourceArticle = "")
+						 $SourceArticle = "", $FreeTextOption = 'phrase')
 	{
 		if (class_exists('MediaWiki\MediaWikiServices')) {
             $this->pDB = \MediaWiki\MediaWikiServices::getInstance()->getDBLoadBalancer()->getConnection(DB_PRIMARY);
@@ -110,6 +111,7 @@ class WikiDB_Query {
 			return;
 
 		$this->pSourceArticle = $SourceArticle;
+		$this->pFreeTextOption = $FreeTextOption;
 
 		$this->pPerformQuery();
 	}
@@ -216,11 +218,47 @@ class WikiDB_Query {
 				} else {
 						$text = '';
 				}
-					foreach ($this->pFreeTextTerms as $term) {
-						if (stripos($text, $term) !== false) {
-							$FilteredRowData[] = $Row;
-							break; // Match any term (OR logic)
-						}
+					switch ($this->pFreeTextOption) {
+						case 'any':
+							// Match any word
+							$words = [];
+							foreach ($this->pFreeTextTerms as $phrase) {
+								$words = array_merge($words, preg_split('/\s+/', $phrase));
+							}
+							foreach ($words as $word) {
+								if (stripos($text, $word) !== false) {
+									$FilteredRowData[] = $Row;
+									break;
+								}
+							}
+							break;
+						case 'all':
+							// Match all words
+							$words = [];
+							foreach ($this->pFreeTextTerms as $phrase) {
+								$words = array_merge($words, preg_split('/\s+/', $phrase));
+							}
+							$allFound = true;
+							foreach ($words as $word) {
+								if (stripos($text, $word) === false) {
+									$allFound = false;
+									break;
+								}
+							}
+							if ($allFound) {
+								$FilteredRowData[] = $Row;
+							}
+							break;
+						case 'phrase':
+						default:
+							// Match exact phrase (current behavior)
+							foreach ($this->pFreeTextTerms as $term) {
+								if (stripos($text, $term) !== false) {
+									$FilteredRowData[] = $Row;
+									break;
+								}
+							}
+							break;
 					}
 				}
 			}

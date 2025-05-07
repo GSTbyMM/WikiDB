@@ -267,71 +267,68 @@ if (!defined('WikiDB')) {
 		$Criteria = $objRequest->getText('criteria');
 		$Order = $objRequest->getText('order');
 		$SourceArticle = $objRequest->getText('sourceArticle');
+		$freetextOption = $objRequest->getVal('freetext_option', 'phrase');
 
-	// Get the table data, possibly filtered/sorted.
-		$Query = new WikiDB_Query($Table, $Criteria, $Order, $SourceArticle);
-		if ($Query->HasErrors()) {
-			WikiDB_AddWikiText($Query->GetErrorMessage(), $objOutput);
-			return false;
-		}
-		$TotalRows = $Query->CountRows();
-		$objResult = $Query->GetRows($Offset, $ItemsPerPage);
+	// When creating the query object, add the option:
+		$Query = new WikiDB_Query($Table, $Criteria, $Order, $SourceArticle, $freetextOption);
 
-	// Output the options form, which should go above all other content.
-		$objOutput->addHTML(pefWikiDB_GetViewDataForm($objRequest, $Criteria,
-													  $Order));
+        $TotalRows = 0;
+        $objResult = null;
 
-	// Report an error if it occurred.
-		if ($Query->HasErrors()) {
-			$Message = $Query->GetErrorMessage();
-			$Message = nl2br(WikiDB_EscapeHTML($Message));
-			$objOutput->addHTML('<p class="error">' . $Message . '</p>');
-		}
-	// Otherwise, if no data found, report the fact.
-		elseif ($objResult->CountRows() == 0) {
-			WikiDB_AddWikiText(WikiDB_Msg('wikidb-nodata'), $objOutput);
-		}
-	// Otherwise, output the table data in the standard format.
-		else {
-		// Add total number of results returned.
-			WikiDB_AddWikiText(WikiDB_Msg('wikidb-viewdata-record', $TotalRows),
-										  $objOutput);
+    // Output the options form, which should go above all other content.
+        // Add the guide and form first
+        $objOutput->addHTML(pefWikiDB_GetViewDataForm($objRequest, $Criteria, $Order));
 
-		// Output pagination controls.
-			$start = $Offset + 1;
-            $end = min($Offset + $ItemsPerPage, $TotalRows);
-            $objOutput->addHTML('<p>Showing results ' . $start . '–' . $end . ' of ' . $TotalRows . '.</p>');
+    // Show error message if present, but do NOT return early
+        if ($Query->HasErrors()) {
+            $Message = $Query->GetErrorMessage();
+            $Message = nl2br(WikiDB_EscapeHTML($Message));
+            $objOutput->addHTML('<div class="wikidb-error-message" style="color:red; margin-bottom:8px;">' . $Message . '</div>');
+        }
 
-			$LastRowOnPage = $Offset + $ItemsPerPage;
-			if ($LastRowOnPage >= $TotalRows)
-				$IsLastPage = true;
-			else
-				$IsLastPage = false;
+        // Only run the query if there are no errors
+        if (!$Query->HasErrors()) {
+            $TotalRows = $Query->CountRows();
+            $objResult = $Query->GetRows($Offset, $ItemsPerPage);
 
-			$arrQueryString = array(
-								'action' => "viewdata",
-							);
+            // If no data found, report the fact.
+            if ($objResult->CountRows() == 0) {
+                WikiDB_AddWikiText(WikiDB_Msg('wikidb-nodata'), $objOutput);
+            }
+            // Otherwise, output the table data in the standard format.
+            else {
+                // Add total number of results returned.
+                WikiDB_AddWikiText(WikiDB_Msg('wikidb-viewdata-record', $TotalRows), $objOutput);
 
-			if (!IsBlank($Criteria))
-				$arrQueryString['criteria'] = $Criteria;
+                // Output pagination controls.
+                $start = $Offset + 1;
+                $end = min($Offset + $ItemsPerPage, $TotalRows);
+                $objOutput->addHTML('<p>Showing results ' . $start . '–' . $end . ' of ' . $TotalRows . '.</p>');
 
-			if (!IsBlank($Order))
-				$arrQueryString['order'] = $Order;
+                $LastRowOnPage = $Offset + $ItemsPerPage;
+                $IsLastPage = ($LastRowOnPage >= $TotalRows);
 
-			$Output = WikiDB_GetPaginationLinks(
-									 $Offset,
-									 $ItemsPerPage,
-									 $Title,
-									 $arrQueryString,
-									 $IsLastPage
-									);
+                $arrQueryString = array('action' => "viewdata");
+                if (!IsBlank($Criteria))
+                    $arrQueryString['criteria'] = $Criteria;
+                if (!IsBlank($Order))
+                    $arrQueryString['order'] = $Order;
 
-			$objOutput->addHTML( '<p>' . $Output . '</p>' );
+                $Output = WikiDB_GetPaginationLinks(
+                    $Offset,
+                    $ItemsPerPage,
+                    $Title,
+                    $arrQueryString,
+                    $IsLastPage
+                );
 
-		// Output the data.
-			$Output = WikiDB_HTMLRenderer::FormatTableData($objResult, true);
-			WikiDB_AddWikiText($Output, $objOutput);
-		}
+                $objOutput->addHTML('<p>' . $Output . '</p>');
+
+                // Output the data.
+                $Output = WikiDB_HTMLRenderer::FormatTableData($objResult, true);
+                WikiDB_AddWikiText($Output, $objOutput);
+            }
+        }
 
 	// Return false to tell MediaWiki that we have successfully generated the page
 	// contents and to skip processing of other hooks.
@@ -381,8 +378,21 @@ if (!defined('WikiDB')) {
 						. WikiDB_Msg('wikidb-formfield-criteria') . '</label></td>'
 				   . '<td align="left"><input type="text" name="criteria" value="'
 						. WikiDB_EscapeHTML($Criteria) . '" size="52"></td>'
-			   . '</tr>'
-			   . '<tr>'
+			   . '</tr>';
+
+		// Add Free Text Options radio buttons
+		$freeTextOption = $objRequest->getVal('freetext_option', 'phrase');
+		$Form .= '<tr><td align="right" valign="top"><label>Free Text Options:</label></td>'
+			  . '<td align="left">'
+			  . '<input type="radio" name="freetext_option" value="any" id="freetext_any"'
+			  . ($freeTextOption === 'any' ? ' checked' : '') . '> <label for="freetext_any">Match any word</label> '
+			  . '<input type="radio" name="freetext_option" value="all" id="freetext_all"'
+			  . ($freeTextOption === 'all' ? ' checked' : '') . '> <label for="freetext_all">Match all words</label> '
+			  . '<input type="radio" name="freetext_option" value="phrase" id="freetext_phrase"'
+			  . ($freeTextOption === 'phrase' ? ' checked' : '') . '> <label for="freetext_phrase">Match exact phrase</label>'
+			  . '</td></tr>';
+
+		$Form .= '<tr>'
 				   . '<td align="right"><label for="criteria">'
 						. WikiDB_Msg('wikidb-formfield-order') . '</label></td>'
 				   . '<td align="left"><input type="text" name="order" value="'

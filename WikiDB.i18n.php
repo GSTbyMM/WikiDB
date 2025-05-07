@@ -72,6 +72,10 @@ $messages['en'] = array(
 		'wikidb-formfield-submit'	=> "Submit",
 		'wikidb-formfield-criteria'	=> "Criteria:",
 		'wikidb-formfield-order'	=> "Order:",
+		'wikidb-freetext-options'	=> "Free Text Options:",
+		'wikidb-freetext-any'		=> "Match any word",
+		'wikidb-freetext-all'		=> "Match all words",
+		'wikidb-freetext-phrase'	=> "Match exact phrase",
 
 	// User-visible query errors.
 		'wikidb-queryerror-unexpectedtoken'
