@@ -560,6 +560,42 @@ class WikiDB_Query {
 				"LT"		=> self::TOKEN_Operator,	// less than
 				"GTE"		=> self::TOKEN_Operator,	// greater than or equal
 				"GT"		=> self::TOKEN_Operator,	// greater than
+				"LIKE"		=> self::TOKEN_Operator,	// SQL LIKE
+
+			// Conjunctions.
+				"AND"		=> self::TOKEN_Conjunction,
+				"XOR"		=> self::TOKEN_Conjunction,
+				"OR"		=> self::TOKEN_Conjunction,
+				"&&"		=> self::TOKEN_Conjunction,
+				"\\|\\|"	=> self::TOKEN_Conjunction,
+				","			=> self::TOKEN_Conjunction,
+
+			// Expression grouping.
+				"\\("		=> self::TOKEN_LeftParenthesis,
+				"\\)"		=> self::TOKEN_RightParenthesis,
+			);
+
+	// Automatically apply word-boundary markers to all text strings, plus the
+	// additional bit of regex hokeyness to capture the next character (which is
+	// required because otherwise we will capture the expression too early.
+		$arrRecognisedTokens = array(
+			// Operators.
+				"<>"		=> self::TOKEN_Operator,	// not equal
+				"!="		=> self::TOKEN_Operator,	// not equal (alt.)
+				"<="		=> self::TOKEN_Operator,	// less than or equal
+				"<)(."		=> self::TOKEN_Operator,	// less than
+				">="		=> self::TOKEN_Operator,	// greater than or equal
+				">)(."		=> self::TOKEN_Operator,	// greater than
+				"=="		=> self::TOKEN_Operator,	// equal (alt.)
+				"=)(."		=> self::TOKEN_Operator,	// equal
+
+				"NEQ"		=> self::TOKEN_Operator,	// not equal
+				"EQ"		=> self::TOKEN_Operator,	// equal
+				"LTE"		=> self::TOKEN_Operator,	// less than or equal
+				"LT"		=> self::TOKEN_Operator,	// less than
+				"GTE"		=> self::TOKEN_Operator,	// greater than or equal
+				"GT"		=> self::TOKEN_Operator,	// greater than
+				"LIKE"		=> self::TOKEN_Operator,	// SQL LIKE
 
 			// Conjunctions.
 				"AND"		=> self::TOKEN_Conjunction,
@@ -603,6 +639,7 @@ class WikiDB_Query {
 				"LTE"	=> "<=",
 				"GT"	=> ">",
 				"GTE"	=> ">=",
+				"LIKE"	=> "LIKE",
 			);
 
 	// Characters that indicated a quoted string, mapping starting character to
@@ -1209,6 +1246,15 @@ class WikiDB_Query {
 
 					case self::TOKEN_String:
 						$UserCriteria .= $DB->addQuotes($Criteria[1]);
+						break;
+
+					case self::TOKEN_Operator:
+						// Add LIKE support
+						if (strtoupper($Criteria[1]) === 'LIKE') {
+							$UserCriteria .= " LIKE ";
+						} else {
+							$UserCriteria .= " " . $Criteria[1] . " ";
+						}
 						break;
 
 					case self::TOKEN_LeftParenthesis:
