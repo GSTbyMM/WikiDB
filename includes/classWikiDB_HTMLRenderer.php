@@ -272,7 +272,13 @@ class WikiDB_HTMLRenderer {
 
 		$RowCount = $objResult->CountRows();
 
-		$MetaDataFields = $objResult->GetMetaDataFields();
+		// Always include these meta fields
+        $MetaDataFields = array('_Row', '_SourceArticle');
+        foreach ($objResult->GetMetaDataFields() as $field) {
+            if (!in_array($field, $MetaDataFields)) {
+                $MetaDataFields[] = $field;
+            }
+        }
 		$DefinedFields = $objResult->GetDefinedFields();
 		$UndefinedFields = $objResult->GetUndefinedFields();
 
@@ -317,11 +323,9 @@ class WikiDB_HTMLRenderer {
 		}
 
 		$Output .= self::pStartRow();
-		if ($ShowExtraInfo) {
-			foreach ($MetaDataFields as $FieldName) {
-				$FieldName = WikiDB_EscapeHTML(substr($FieldName, 1));
-				$Output .= self::pHeaderCell($FieldName);
-			}
+		foreach ($MetaDataFields as $FieldName) {
+			$FieldName = WikiDB_EscapeHTML(substr($FieldName, 1));
+			$Output .= self::pHeaderCell($FieldName);
 		}
 
 		foreach ($DefinedFields as $FieldName) {
@@ -337,18 +341,20 @@ class WikiDB_HTMLRenderer {
 
 		for ($Row = 0; $Row < $RowCount; $Row++) {
 			$Output .= self::pStartRow();
+            
+            
+			// Output meta fields
+            $RowData = $objResult->GetFieldValues($Row);
+            foreach ($MetaDataFields as $FieldName) {
+                $Value = isset($RowData[$FieldName]) ? $RowData[$FieldName] : '';
+                $Output .= self::pDataCell($Value);
+            }
 
-			if ($ShowExtraInfo) {
-				$arrData = $objResult->GetMetaDataFieldValues($Row);
-				foreach ($arrData as $FieldValue) {
-					$Output .= self::pDataCell($FieldValue);
-				}
-			}
-
-			$arrData = $objResult->GetDefinedFieldValues($Row);
-			foreach ($arrData as $FieldValue) {
-				$Output .= self::pDataCell($FieldValue);
-			}
+			// Output defined fields
+            foreach ($DefinedFields as $FieldName) {
+                $Value = isset($RowData[$FieldName]) ? $RowData[$FieldName] : '';
+                $Output .= self::pDataCell($Value);
+            }
 
 			if ($objResult->HasMigratedFields() && $ShowExtraInfo) {
 				$arrAliases = $objResult->GetMigratedFields($Row);
@@ -366,10 +372,11 @@ class WikiDB_HTMLRenderer {
 				$Output .= self::pDataCell($AliasString);
 			}
 
-			$arrData = $objResult->GetUndefinedFieldValues($Row);
-			foreach ($arrData as $FieldValue) {
-				$Output .= self::pDataCell($FieldValue, $UndefinedFieldStyle);
-			}
+			// Output undefined fields
+            foreach ($UndefinedFields as $FieldName) {
+                $Value = isset($RowData[$FieldName]) ? $RowData[$FieldName] : '';
+                $Output .= self::pDataCell($Value);
+            }
 
 			$Output .= self::pEndRow();
 		}
