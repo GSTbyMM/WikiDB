@@ -270,6 +270,10 @@ if (!defined('WikiDB')) {
 
 	// Get the table data, possibly filtered/sorted.
 		$Query = new WikiDB_Query($Table, $Criteria, $Order, $SourceArticle);
+		if ($Query->HasErrors()) {
+			WikiDB_AddWikiText($Query->GetErrorMessage(), $objOutput);
+			return false;
+		}
 		$TotalRows = $Query->CountRows();
 		$objResult = $Query->GetRows($Offset, $ItemsPerPage);
 

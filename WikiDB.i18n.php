@@ -95,6 +95,8 @@ $messages['en'] = array(
 		'wikidb-queryerror-multitablequery'
 							=> "Currently only queries involving a single table "
 							 . "are supported.",
+		'wikidb-queryerror-freetextonly' =>
+							"Kindly use the above search bar for free text search. Use this search only with conditions.",
 
 		'wikidb-queryerror-expression'	=> "expression",
 

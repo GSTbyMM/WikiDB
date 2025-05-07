@@ -1,4 +1,7 @@
 <?php
+
+use MediaWiki\MediaWikiServices;
+
 if (!defined('MEDIAWIKI'))
 	die("MediaWiki extensions cannot be run directly.");
 if (!defined('WikiDB')) {
@@ -24,6 +27,7 @@ class WikiDB_Query {
 	var $pSortFields = array();
 	var $pCriteria = array();
 	var $pSourceArticle = "";
+	var $pFreeTextTerms = array();
 
 	var $pSQL = "";
 	var $pResult;
@@ -70,11 +74,27 @@ class WikiDB_Query {
         }
 		$this->pErrorMsg = "";
 
-	// For simplicity, if a Table object is passed in, we just extract the table
-	// name and use this as the table string.  I'm sure we could improve performance
-	// by using the supplied table object rather than extracting the name, parsing
-	// it and creating a new table object, but that would require a bit more work.
-	// TODO: Optimise this as described above.
+		// Extract free text terms (in double quotes) from criteria string
+		$this->pFreeTextTerms = array();
+		if (preg_match_all('/"([^"]+)"/', $CriteriaString, $matches)) {
+			$this->pFreeTextTerms = $matches[1];
+			// Remove free text terms from criteria string for normal parsing
+			$CriteriaString = preg_replace('/"([^"]+)"/', '', $CriteriaString);
+		}
+
+		 // After removing free text terms from $CriteriaString
+		if (count($this->pFreeTextTerms) > 0) {
+			// If the criteria string is not empty and does not start with a space, add one
+			if ($CriteriaString !== '' && $CriteriaString[0] !== ' ') {
+				$CriteriaString = ' ' . $CriteriaString;
+			}
+		}
+
+		// For simplicity, if a Table object is passed in, we just extract the table
+		// name and use this as the table string.  I'm sure we could improve performance
+		// by using the supplied table object rather than extracting the name, parsing
+		// it and creating a new table object, but that would require a bit more work.
+		// TODO: Optimise this as described above.
 		$TableClass = "WikiDB_Table";
 		if (is_object($TableString) && $TableString instanceof $TableClass) {
 			$TableString = $TableString->GetFullName();
@@ -147,58 +167,64 @@ class WikiDB_Query {
 // $Limit, if there are fewer rows available.
 // If an error occurs, the results array will be empty.
 	function GetRows($Offset = 0, $Limit = null) {
-	// Initialise some variables.  $RowData is the results array that will be
-	// returned, whilst $RowID is the current row number.  As we want the index
-	// to be the actual row number from the data, we initialise it to the specified
-	// start row, rather than always counting from zero.
 		$RowData = array();
 		$RowID = 0;
 
-	// Only pull out data if there is some (i.e. there were no errors, and the
-	// row-count is non-zero).
+		// Only pull out data if there is some (i.e. there were no errors, and the row-count is non-zero).
 		if (!$this->HasErrors() && $this->pResult->numRows() > 0) {
-		// Seek to the position we are looking for.  We do this every time, even when
-		// $Offset is zero, in case this function has already been called and we are
-		// no longer at the start of the record set.
 			$this->pResult->seek($Offset);
-
-		// Get the Table object, which is used as part of unserialisation.
-		// We get it here so it doesn't need to be retrieved for each row.
 			$Table = $this->GetTable();
 
-		// Build the results array, an array with one element per data row.
-		// For each element: 'Data' is an array containing FieldName => Value pairs
-		// for each field defined in this row of data, and 'MetaData' is a similar
-		// array containing meta-data for the row (these field names are always
-		// preceded by an underscore).
-		// We loop through the results until either there are no more rows, or we
-		// reach the specified limit (if a limit has been set).
 			while (($Limit === null || $Limit > $RowID)
-					&& $Row = $this->pResult->fetchObject())
+				&& $Row = $this->pResult->fetchObject())
 			{
-			// Extract the data for this row.
 				$RowData[$RowID]['Data'] = unserialize($Row->parsed_data);
 
-			// Sort any multi-value fields.
-				$this->pSortMultiValueFields($RowData[$RowID]['Data'], $Table);
-
-			///////////////////
-			// Add the meta-data.
-
-			// Row number:
+				// Add the meta-data.
 				$RowData[$RowID]['MetaData']['_Row'] = $RowID + $Offset + 1;
-
-			// Source article (where data is defined):
-				$SourceTitle = Title::newFromText($Row->page_title,
-												  $Row->page_namespace);
-				$RowData[$RowID]['MetaData']['_SourceArticle']
-												= $SourceTitle->getFullText();
-
-			// END: MetaData
-			///////////////////
+				$SourceTitle = Title::newFromText($Row->page_title, $Row->page_namespace);
+				$RowData[$RowID]['MetaData']['_SourceArticle'] = $SourceTitle->getFullText();
 
 				$RowID++;
 			}
+		}
+
+		// If there are free text terms, filter results
+		if (count($this->pFreeTextTerms) > 0) {
+			// If there are NO field-based criteria, show UI message and return empty
+			if ($this->pCriteria === array() || $this->pCriteria === null) {
+				$this->pErrorMsg = "Kindly use the above search bar for free text search. Use this search only with conditions.";
+				return array();
+			}
+
+			$FilteredRowData = array();
+			foreach ($RowData as $Row) {
+				$SourceArticle = $Row['MetaData']['_SourceArticle'];
+				$titleObj = Title::newFromText( $SourceArticle );
+				if ( $titleObj && $titleObj->exists() ) {
+					// MW 1.36+ use the WikiPageFactory service
+					$wikiPage = MediaWikiServices::getInstance()
+						->getWikiPageFactory()
+						->newFromTitle( $titleObj );
+					$content  = $wikiPage->getContent();
+					if ( $content !== null && method_exists( $content, 'getText' ) ) {
+						// TextContent in MW 1.37+:
+						$text = $content->getText();
+				} elseif ( $content !== null && method_exists( $content, 'getNativeData' ) ) {
+						// other Content models:
+						$text = $content->getNativeData();
+				} else {
+						$text = '';
+				}
+					foreach ($this->pFreeTextTerms as $term) {
+						if (stripos($text, $term) !== false) {
+							$FilteredRowData[] = $Row;
+							break; // Match any term (OR logic)
+						}
+					}
+				}
+			}
+			$RowData = $FilteredRowData;
 		}
 
 		return WikiDB_QueryResult::NewFromQuery($RowData, $Offset, $Limit, $this);
