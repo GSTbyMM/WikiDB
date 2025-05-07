@@ -1,5 +1,12 @@
 Note: This is fork of the original extension compatible with MediaWiki 1.43.1 with PHP 8.4.
 
+== ADDED FEATURES ==
+- LIKE operator
+In the Criteria field "latin maxim LIKE %Audi%" where "latin maxim" is the field name and "Audi" is the value we are searching for. 
+For exact word match, use %Audi%.
+For starts with: Audi%
+For ends with: %Audi
+
 == SUMMARY ==
 
 WikiDB is a MediaWiki extension which can be used to add database
