@@ -7,6 +7,10 @@ For exact word match, use %Audi%.
 For starts with: Audi%
 For ends with: %Audi
 
+- Date data type and BETWEEN operator
+Date formats: dd-mm-YYYY and dd/mm/YYYY
+Syntax for BETWEEN operator: fieldname BETWEEN date1 date2
+
 == SUMMARY ==
 
 WikiDB is a MediaWiki extension which can be used to add database
