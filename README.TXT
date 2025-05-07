@@ -1,15 +1,28 @@
 Note: This is fork of the original extension compatible with MediaWiki 1.43.1 with PHP 8.4.
 
-== ADDED FEATURES ==
+== ADDED FEATURES IN THIS FORK ==
+- Free Text Search (with options) in SourceArticles with Conditions
+
+If you not only want to filter the rows on the basis of Meta data(property=value) you entered using <data> tag on the pages but also want to query the text of those pages to further narrow down the results then you can simply search your text along with conditions in the Criteria field.
+* Syntax: "word1 word2 word3 word4" CONDITION
+* Options: > Match any word > Match all words > Match exact phrase 
+* Example: "Hello World" Formation Date BETWEEN 04-10-2017 05-11-2025 - Option selected: Match all words - This will display all rows where Date in Formation Date field is BETWEEN(including) 04-10-2017 and 05-11-2025 AND their SourceArticle pages text consists of "Hello" and "World" both anywhere in any sequence. In other words, it will eliminate all rows where "Hello" and "World" both do not exists in the text of the SourceArticle pages evenif their Formation Date field consists of Date falls between(including) 04-10-2017 and 05-11-2025.
+* Options explanation: 
+> Match any word - Search database with any of the words entered !
+> Match all words - Search database with "all words" present together but in any order !
+> Match exact phrase - Search database with "all words" present together and in the same order !
+
 - LIKE operator
+
 In the Criteria field "latin maxim LIKE %Audi%" where "latin maxim" is the field name and "Audi" is the value we are searching for. 
 For exact word match, use %Audi%.
 For starts with: Audi%
 For ends with: %Audi
 
 - Date data type and BETWEEN operator
+
 Date formats: dd-mm-YYYY and dd/mm/YYYY
-Syntax for BETWEEN operator: fieldname BETWEEN date1 date2
+Syntax for BETWEEN operator: fieldname<space>BETWEEN<space>date1<space>date2
 
 == SUMMARY ==
 
@@ -45,5 +58,6 @@ By installing or using this extension, you are accepting that you
 are doing so at your own risk.  If you do not agree with this then
 do not install or use WikiDB.
 
+Originally Developed by
 - Mark Clements (HappyDog)
   mclements@kennel17.co.uk
