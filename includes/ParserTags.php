@@ -223,32 +223,24 @@ if (!defined('WikiDB')) {
 		$Args = pWikiDB_ReplaceVariablesInArgs($Args, $Parser, $Frame);
 
 	// Get table argument (required)
-		if (isset($Args['table']))
-			$TableName = $Args['table'];
-		else
-			$TableName = "";
-
-	// If no table argument, then there is no way of retrieving the data, so we
-	// print a warning and exit.
+		$TableName = isset($Args['table']) ? $Args['table'] : "";
 		if ($TableName == "") {
-			$Msg = "''" . WikiDB_Msg('wikidb-missing-tablename', "&lt;repeat&gt;")
-				 . "''";
+			$Msg = "''" . WikiDB_Msg('wikidb-missing-tablename', "&lt;repeat&gt;") . "''";
 			return WikiDB_Parse($Msg, $Parser, $Frame);
 		}
 
-	// Get sort argument (optional - default to unsorted)
-	// TODO: It would be good if we could also specify a default sort as part of the
-	//		 table definition, which would be used if no sort is specified here.
-		if (isset($Args['sort']))
-			$Sort = $Args['sort'];
-		else
-			$Sort = "";
+	// Get sort argument (optional)
+		$Sort = isset($Args['order']) ? $Args['order'] : (isset($Args['sort']) ? $Args['sort'] : "");
 
-	// Get criteria argument (optional - default to unfiltered)
-		if (isset($Args['criteria']))
-			$Where = $Args['criteria'];
-		else
-			$Where = "";
+	// Get criteria argument (optional)
+		$Where = isset($Args['criteria']) ? $Args['criteria'] : "";
+
+	// Get col argument (optional)
+		$Cols = array();
+		if (isset($Args['col']) && trim($Args['col']) !== "") {
+		// Split by comma, trim whitespace, and normalise case
+			$Cols = array_map('trim', explode(',', $Args['col']));
+		}
 
 	// Perform the query and get the resulting data set.
 		$Query = new WikiDB_Query($TableName, $Where, $Sort);
@@ -260,19 +252,19 @@ if (!defined('WikiDB')) {
 
 		$objResult = $Query->GetRows();
 
-	// If tag contents are empty, display in the standard format.
+	// If tag contents are empty, display in the standard format, but filtered by $Cols if set.
 		if (trim($Input) == "") {
-			$Output = WikiDB_HTMLRenderer::FormatTableData($objResult);
+			$Output = WikiDB_HTMLRenderer::FormatTableData($objResult, true, $Cols, false); // <--- false here
 		}
 	// If tag contents are non-empty then use it as a template for each row
 	// of the returned data, expanding variables where necessary.
 		else {
 			$arrInput = WikiDB_Parser::ParseQueryTag($Input);
 			$Output = WikiDB_HTMLRenderer::CustomFormatTableData(
-											$objResult, $Parser, $Frame,
-											$arrInput['body'], $arrInput['header'],
-											$arrInput['footer']
-										);
+												$objResult, $Parser, $Frame,
+												$arrInput['body'], $arrInput['header'],
+												$arrInput['footer'], $Cols
+											);
 		}
 
 	// Return the resulting output, parsed as wiki text.

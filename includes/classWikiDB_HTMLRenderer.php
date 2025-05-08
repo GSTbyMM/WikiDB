@@ -267,94 +267,98 @@ class WikiDB_HTMLRenderer {
 // * The 'data' tab in the table namespace.
 // * The <repeat> tag.
 // * <data> tag parser.
-	static function FormatTableData($objResult, $ShowExtraInfo = false) {
+	static function FormatTableData($objResult, $ShowExtraInfo = false, $Cols = null, $ShowBifurcationRow = true) {
 		$Output = "";
 
 		$RowCount = $objResult->CountRows();
 
 		// Always include these meta fields
-        $MetaDataFields = array('_Row', '_SourceArticle');
-        foreach ($objResult->GetMetaDataFields() as $field) {
-            if (!in_array($field, $MetaDataFields)) {
-                $MetaDataFields[] = $field;
-            }
-        }
+		$MetaDataFields = array('_Row', '_SourceArticle');
+		foreach ($objResult->GetMetaDataFields() as $field) {
+			if (!in_array($field, $MetaDataFields)) {
+				$MetaDataFields[] = $field;
+			}
+		}
 		$DefinedFields = $objResult->GetDefinedFields();
 		$UndefinedFields = $objResult->GetUndefinedFields();
 
-	// If there are no data rows, and the table doesn't have any fields defined,
-	// output nothing (rather than a table with no rows or columns defined).
-	// TODO: Or we could output an error message, e.g. "No data defined."
+		// If there are no data rows, and the table doesn't have any fields defined,
+		// output nothing (rather than a table with no rows or columns defined).
 		if ($RowCount == 0 && count($DefinedFields) == 0)
 			return $Output;
 
-	// Set the style for undefined field cells (both headers and data).
-	// If all extra info is being shown (so the column groups are displayed), or if
-	// there are no fields defined for this table at all, then no special styling
-	// is used, but in other cases we colour them grey to differentiate them from the
-	// defined fields.
+		// Set the style for undefined field cells (both headers and data).
+		// If all extra info is being shown (so the column groups are displayed), or if
+		// there are no fields defined for this table at all, then no special styling
+		// is used, but in other cases we colour them grey to differentiate them from the
+		// defined fields.
 		if (count($DefinedFields) > 0 && !$ShowExtraInfo)
 			$UndefinedFieldStyle = "color: #999999;";
 		else
 			$UndefinedFieldStyle = "";
 
-		$Output .= self::pStartTable("WikiDBDataTable");
-		if ($ShowExtraInfo) {
+		// If $Cols is set, filter the columns to display
+		if (is_array($Cols) && count($Cols) > 0) {
+			// Normalise to lower-case for comparison, but preserve original case for display
+			$ColsNorm = array_map('strtolower', $Cols);
+
+			// Filter meta fields
+			$MetaDataFields = array_filter($MetaDataFields, function($f) use ($ColsNorm) {
+				return in_array(strtolower(ltrim($f, '_')), $ColsNorm) || in_array(strtolower($f), $ColsNorm);
+			});
+			// Filter defined fields
+			$DefinedFields = array_filter($DefinedFields, function($f) use ($ColsNorm) {
+				return in_array(strtolower($f), $ColsNorm);
+			});
+			// Filter undefined fields
+			$UndefinedFields = array_filter($UndefinedFields, function($f) use ($ColsNorm) {
+				return in_array(strtolower($f), $ColsNorm);
+			});
+		}
+
+		// Output table header
+		$Output .= self::pStartTable("WikiDBTableData");
+
+		// --- PATCH START: Only show bifurcation row if $ShowBifurcationRow is true ---
+		if ($ShowBifurcationRow) {
 			$Output .= self::pStartRow();
-		// Note: We assume there will be at least two meta-data fields,
-		//		 with the first one being the RowID.  I can't see this changing, but
-		//		 if it does then this cell layout will need reworking.
-			$Output .= self::pHeaderCell("");
-			$Output .= self::pHeaderCell(WikiDB_Msg('wikidb-fields-meta'), "",
-										 count($MetaDataFields) - 1);
-			if (count($DefinedFields) > 0) {
-				$Output .= self::pHeaderCell(WikiDB_Msg('wikidb-fields-defined'), "",
-											 count($DefinedFields));
-			}
-			if ($objResult->HasMigratedFields()) {
-				$Output .= self::pHeaderCell(WikiDB_Msg('wikidb-fields-migrated'),
-											 "", "", 2);
-			}
-			if (count($UndefinedFields) > 0) {
-				$Output .= self::pHeaderCell(WikiDB_Msg('wikidb-fields-undefined'),
-											 "", count($UndefinedFields));
-			}
+			if (count($MetaDataFields) > 0)
+				$Output .= self::pHeaderCell('Meta-Data', 'background:#e0e0e0;', count($MetaDataFields));
+			if (count($DefinedFields) > 0)
+				$Output .= self::pHeaderCell('Defined', 'background:#e0ffe0;', count($DefinedFields));
+			if (count($UndefinedFields) > 0)
+				$Output .= self::pHeaderCell('Undefined', 'background:#ffe0e0;', count($UndefinedFields));
 			$Output .= self::pEndRow();
 		}
+		// --- PATCH END ---
 
 		$Output .= self::pStartRow();
 		foreach ($MetaDataFields as $FieldName) {
-			$FieldName = WikiDB_EscapeHTML(substr($FieldName, 1));
-			$Output .= self::pHeaderCell($FieldName);
+			$Output .= self::pHeaderCell(WikiDB_EscapeHTML(ltrim($FieldName, '_')));
 		}
-
 		foreach ($DefinedFields as $FieldName) {
-			$FieldName = WikiDB_EscapeHTML($FieldName);
-			$Output .= self::pHeaderCell($FieldName);
+			$Output .= self::pHeaderCell(WikiDB_EscapeHTML($FieldName));
 		}
-
 		foreach ($UndefinedFields as $FieldName) {
-			$FieldName = WikiDB_EscapeHTML($FieldName);
-			$Output .= self::pHeaderCell($FieldName, $UndefinedFieldStyle);
+			$Output .= self::pHeaderCell(WikiDB_EscapeHTML($FieldName));
 		}
 		$Output .= self::pEndRow();
 
+		// Output table rows
 		for ($Row = 0; $Row < $RowCount; $Row++) {
 			$Output .= self::pStartRow();
-            
-            
-			// Output meta fields
-            $RowData = $objResult->GetFieldValues($Row);
-            foreach ($MetaDataFields as $FieldName) {
-                $Value = isset($RowData[$FieldName]) ? $RowData[$FieldName] : '';
-                $Output .= self::pDataCell($Value);
-            }
 
+			// Output meta fields
+			$RowData = $objResult->GetFieldValues($Row);
+			foreach ($MetaDataFields as $FieldName) {
+				$Value = isset($RowData[$FieldName]) ? $RowData[$FieldName] : '';
+				$Output .= self::pDataCell($Value);
+			}
 			// Output defined fields
-            foreach ($DefinedFields as $FieldName) {
-                $Value = isset($RowData[$FieldName]) ? $RowData[$FieldName] : '';
-                $Output .= self::pDataCell($Value);
-            }
+			foreach ($DefinedFields as $FieldName) {
+				$Value = isset($RowData[$FieldName]) ? $RowData[$FieldName] : '';
+				$Output .= self::pDataCell($Value);
+			}
 
 			if ($objResult->HasMigratedFields() && $ShowExtraInfo) {
 				$arrAliases = $objResult->GetMigratedFields($Row);
@@ -373,10 +377,10 @@ class WikiDB_HTMLRenderer {
 			}
 
 			// Output undefined fields
-            foreach ($UndefinedFields as $FieldName) {
-                $Value = isset($RowData[$FieldName]) ? $RowData[$FieldName] : '';
-                $Output .= self::pDataCell($Value);
-            }
+			foreach ($UndefinedFields as $FieldName) {
+				$Value = isset($RowData[$FieldName]) ? $RowData[$FieldName] : '';
+				$Output .= self::pDataCell($Value);
+			}
 
 			$Output .= self::pEndRow();
 		}
@@ -433,33 +437,36 @@ class WikiDB_HTMLRenderer {
 // CustomFormatTableData()
 // Formats the supplied WikiDB_QueryResult using the specified wikitext as template
 // text.
-	static function CustomFormatTableData($objResult, $Parser, $Frame, $Body,
-										  $Header = "", $Footer = "")
-	{
+	static function CustomFormatTableData($objResult, $Parser, $Frame, $Body, $Header = "", $Footer = "", $Cols = null) {
 		$Output = "";
 
 		$RowCount = $objResult->CountRows();
 		for ($Row = 0; $Row < $RowCount; $Row++) {
-		// Get the normalised data for this row.
-		// TODO: Currently, any multi-field values are collapsed by
-		//		 GetNormalisedRow() into a single string.  Is this the correct
-		//		 behaviour in this scenario, or should we (can we, even?) pass the
-		//		 individual values into the template?
-			$arrData = $objResult->GetNormalisedRow($Row);
+			// Get the normalised data for this row.
+			$arrData = $objResult->GetFieldValues($Row);
+
+			// If $Cols is set, filter $arrData to only those fields
+			if (is_array($Cols) && count($Cols) > 0) {
+				$ColsNorm = array_map('strtolower', $Cols);
+				$arrData = array_filter($arrData, function($k) use ($ColsNorm) {
+					return in_array(strtolower($k), $ColsNorm) || in_array(strtolower(ltrim($k, '_')), $ColsNorm);
+				}, ARRAY_FILTER_USE_KEY);
+			}
+
 			$Output .= pWikiDB_ExpandVariables($Body, $arrData, $Parser, $Frame);
 		}
 
-	// HACK: Remove the 'edit section' links, which get rendered incorrectly
-	//		 and which wouldn't work even if they rendered fine.
-	// Note: I tried adding "__NOEDITSECTION__" to the body before parsing, but
-	//		 this doesn't have any effect.
-	// TODO: Is there a way of disabling this behaviour when parsing, instead
-	//		 of having to hack the result like this?  I couldn't find a way, but
-	//		 this bit of MediaWiki doesn't seem to be very well documented...
-	// Note that the regex is different depending on the MW version.  Later
-	// versions use a marker which is expanded after this point, whilst earlier
-	// versions have already done the full HTML replacement by this stage.
-	// @back-compat MW < 1.18
+		// HACK: Remove the 'edit section' links, which get rendered incorrectly
+		// and which wouldn't work even if they rendered fine.
+		// Note: I tried adding "__NOEDITSECTION__" to the body before parsing, but
+		// this doesn't have any effect.
+		// TODO: Is there a way of disabling this behaviour when parsing, instead
+		// of having to hack the result like this?  I couldn't find a way, but
+		// this bit of MediaWiki doesn't seem to be very well documented...
+		// Note that the regex is different depending on the MW version.  Later
+		// versions use a marker which is expanded after this point, whilst earlier
+		// versions have already done the full HTML replacement by this stage.
+		// @back-compat MW < 1.18
 		if (version_compare(MW_VERSION, "1.18", "<")) {
 			$Regex = '/<span class="editsection">\[<a href="[^"]*" '
 				   . 'title="[^"]*">[^<]*<\/a>\]<\/span>\s*/U';
@@ -470,7 +477,7 @@ class WikiDB_HTMLRenderer {
 		}
 		$Output = preg_replace($Regex, "", $Output);
 
-	// Add any header/footer that was specified.
+		// Add any header/footer that was specified.
 		$Output = $Header . $Output . $Footer;
 
 		return $Output;
