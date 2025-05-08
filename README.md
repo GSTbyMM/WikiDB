@@ -26,7 +26,7 @@ Date formats: dd-mm-YYYY and dd/mm/YYYY<br>
 Syntax for BETWEEN operator: fieldname\<space\>BETWEEN\<space\>date1\<space\>date2<br>
 Example: Enactment Date BETWEEN 13-04-2017 30-10-2027
 
-4. **"Col" attribute for <repeat> tag**
+4. **"Col" attribute for \<repeat> tag**
 
 If you want to render only a selected columns of the table then you can use "col" attribute in <repeat> tag to specify those columns. <br>
 Syntax: \<repeat table="tableName" col="col1, col3, col5"></repeat><br>
