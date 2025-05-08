@@ -68,5 +68,3 @@ do not install or use WikiDB.
 Originally Developed by
 - Mark Clements (HappyDog)
   mclements@kennel17.co.uk
-
-Fork 
