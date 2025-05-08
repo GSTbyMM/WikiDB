@@ -4,6 +4,7 @@ Note: This is fork of the original extension compatible with MediaWiki 1.43.1 wi
 - Free Text Search (with options) in SourceArticles with Conditions
 
 If you not only want to filter the rows on the basis of Meta data(property=value) you entered using <data> tag on the pages but also want to query the text of those pages to further narrow down the results then you can simply search your text along with conditions in the Criteria field.
+
 * Syntax: "word1 word2 word3 word4" CONDITION
 * Options: > Match any word > Match all words > Match exact phrase 
 * Example: "Hello World" Formation Date BETWEEN 04-10-2017 05-11-2025 - Option selected: Match all words - This will display all rows where Date in Formation Date field is BETWEEN(including) 04-10-2017 and 05-11-2025 AND their SourceArticle pages text consists of "Hello" and "World" both anywhere in any sequence. In other words, it will eliminate all rows where "Hello" and "World" both do not exists in the text of the SourceArticle pages evenif their Formation Date field consists of Date falls between(including) 04-10-2017 and 05-11-2025.
@@ -23,6 +24,12 @@ For ends with: %Audi
 
 Date formats: dd-mm-YYYY and dd/mm/YYYY
 Syntax for BETWEEN operator: fieldname<space>BETWEEN<space>date1<space>date2
+
+- "Col" attribute for <repeat> tag
+
+If you want to render only a selected columns of the table then you can use "col" attribute in <repeat> tag to specify those columns. 
+Syntax: <repeat table="tableName" col="col1, col3, col5"></repeat>
+Example: <repeat table="CountriesData" criteria="country=India AND state=rajasthan" col="cities, longitude, latitude" order="cities"></repeat> will display table with only 3 columns Cities, Longitude, Latitude where names of cities are sorted alphabatically.
 
 == SUMMARY ==
 
@@ -61,3 +68,5 @@ do not install or use WikiDB.
 Originally Developed by
 - Mark Clements (HappyDog)
   mclements@kennel17.co.uk
+
+Fork 
